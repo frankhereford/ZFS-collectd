@@ -1,56 +1,78 @@
-package Collectd::Plugins::ZfsSnapCount;
+package Collectd::Plugins::ZFS;
 
 use strict;
 no strict "subs";
 
 use Collectd qw (:plugin :types);
 
-sub snapshot_read
+my %zpool;
+my %zfs;
+my $snap_count;
+
+sub get_zpool_zfs_data
   {
-  my $vl = { plugin => 'zfs_snapshot_count', type => 'gauge' };
+  %zpool = {};
+  %zfs = {};
+
+  my $cmd = "zpool get -pH size,free,freeing,capacity,fragmentation";
+  open(my $zpool, "-|", $cmd);
+  my %zpool;
+  while (my $line = <$zpool>)
+    {
+    chomp $line;
+    my @data = split(/\s/, $line);
+    $data[2] =~ s/\%//g;
+    $zpool{$data[1]} = $data[2];
+    }
+  close $zpool;
+
+  my $cmd = "zfs list -o mountpoint,compressratio,refcompressratio,used,available,usedbydataset,usedbysnapshots -p -t filesystem";
+  open(my $zfs, "-|", $cmd);
+  my %zfs;
+  my $headers = <$zfs>;
+  chomp $headers;
+  my @headers = split(/\s+/, $headers);
+  for (my $x = 0; $x < scalar(@headers); $x++)
+    {
+    $headers[$x] = lc($headers[$x]);
+    }
+  while (my $line = <$zfs>)
+    {
+    chomp $line;
+    my @data = split(/\s+/, $line);
+    $zfs{$data[0]} = {};
+    for (my $x = 1; $x < scalar(@data); $x++)
+      {
+      if ($data[$x] =~ /^\d+$/)
+        {
+        $data[$x] = $data[$x];
+        }
+      $zfs{$data[0]}->{$headers[$x]} = $data[$x];
+      }
+    }
+  close $zfs;
+
   my $cmd = "sudo zfs list -t snapshot";
   open(my $zfs , "-|", $cmd);
-  my $snapshot_count = 0;
-  while (<$zfs>) { $snapshot_count++; }
+  while (<$zfs>) { $snap_count++; }
   close $zfs;
-  #print "Snap count: ", $snapshot_count, "\n";
 
-  $vl->{'values'} = [ $snapshot_count ];
-  plugin_dispatch_values ($vl);
   return 1;
   }
 
-#sub snapshot_write
-  #{
-  #my ($type, $ds, $vl) = @_;
-  #for (my $i = 0; $i < scalar (@$ds); ++$i) 
-    #{
-    ##print "$vl->{'plugin'} ($vl->{'type'}): $vl->{'values'}->[$i]\n";
-    #}
-  #return 1;
-  #}
-
-#sub snapshot_match
-  #{
-  #my ($ds, $vl, $meta, $user_data) = @_;
-  #if (matches($ds, $vl)) 
-    #{
-    #return FC_MATCH_MATCHES;
-    #}
-  #else 
-    #{
-    #return FC_MATCH_NO_MATCH;
-    #}
-  #}
-
-sub snapshot_log
+sub snapshot_write
   {
-  return 1
+  my $value = { 
+    plugin => 'ZFS', 
+    type => 'gauge',
+    values => [ $snap_count],
+    };
+
+  plugin_dispatch_values ($value );
+  return 1;
   }
 
-plugin_register (TYPE_LOG, "zfs_snapshot_count", "snapshot_log");
-plugin_register (TYPE_READ, "zfs_snapshot_count", "snapshot_read");
-#plugin_register (TYPE_WRITE, "zfs_snapshot_count", "snapshot_write");
-#fc_register (FC_MATCH, "zfs_snapshot_count", "snapshot_match");
+plugin_register (TYPE_INIT, "ZFS", "get_zpool_zfs_data");
+plugin_register (TYPE_READ, "ZFS", "snapshot_write");
 
 1;
