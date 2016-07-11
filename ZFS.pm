@@ -87,8 +87,29 @@ sub zpool_read
     host => $host,
     values => [ $zpool{'freeing'}],
     };
-
   plugin_dispatch_values ($freeing);
+
+  my $capacity = 
+    {
+    plugin => 'ZFS',
+    type => 'zpool_capacity',
+    time => time,
+    interval => plugin_get_interval(),
+    host => $host,
+    values => [ $zpool{'capacity'}],
+    };
+  plugin_dispatch_values ($capacity);
+
+  my $fragmentation = 
+    {
+    plugin => 'ZFS',
+    type => 'zpool_fragmentation',
+    time => time,
+    interval => plugin_get_interval(),
+    host => $host,
+    values => [ $zpool{'fragmentation'}],
+    };
+  plugin_dispatch_values ($fragmentation);
 
   return 1;
   }
