@@ -3,16 +3,21 @@ package Collectd::Plugins::ZFS;
 use strict;
 no strict "subs";
 use Data::Dumper;
+use Redis;
 
 use Collectd qw (:all);
 
+my $redis = Redis->new;
+
 sub snapshot_read
   {
-  my $cmd = "sudo zfs list -t snapshot";
-  open(my $zfs , "-|", $cmd);
-  my $snapshot_count = 0;
-  while (<$zfs>) { $snapshot_count++; }
-  close $zfs;
+  #my $cmd = "sudo zfs list -t snapshot";
+  #open(my $zfs , "-|", $cmd);
+  #my $snapshot_count = 0;
+  #while (<$zfs>) { $snapshot_count++; }
+  #close $zfs;
+
+  my $snapshot_count = $redis->get('snapshot_count');
 
   my $host = `hostname -f`;
   chomp $host;
@@ -78,6 +83,35 @@ sub zpool_read
   return 1;
   }
 
+
+sub zfs_read
+  {
+  my $cmd = "zfs list -o mountpoint,compressratio,refcompressratio,used,available,usedbydataset,usedbysnapshots -p -t filesystem";
+  open(my $zfs, "-|", $cmd);
+  my %zfs;
+  my $headers = <$zfs>;
+  chomp $headers;
+  my @headers = split(/\s+/, $headers);
+  for (my $x = 0; $x < scalar(@headers); $x++)
+    {
+    $headers[$x] = lc($headers[$x]);
+    }
+  while (my $line = <$zfs>)
+    {
+    chomp $line;
+    my @data = split(/\s+/, $line);
+    $zfs{$data[0]} = {};
+    for (my $x = 1; $x < scalar(@data); $x++)
+      {
+      if ($data[$x] =~ /^\d+$/)
+        {
+        $data[$x] = $data[$x];
+        }
+      $zfs{$data[0]}->{$headers[$x]} = $data[$x];
+      }
+    }
+  close $zfs;  
+  }
 
 sub read
   {
