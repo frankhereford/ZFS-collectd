@@ -9,6 +9,9 @@ use Collectd qw (:all);
 
 my $redis = Redis->new;
 
+my $host = `hostname -f`;
+chomp $host;
+
 sub snapshot_read
   {
   #my $cmd = "sudo zfs list -t snapshot";
@@ -51,11 +54,7 @@ sub zpool_read
     }
   close $zpool;
 
-
   # Fighting with this perl "API" to do some of the more complex stuf.. 
-
-  my $host = `hostname -f`;
-  chomp $host;
 
   #my $data = 
     #{
@@ -115,7 +114,6 @@ sub zpool_read
   }
 
 
-
 sub zfs_read
   {
   my $cmd = "zfs list -o mountpoint,compressratio,refcompressratio,used,available,usedbydataset,usedbysnapshots -p -t filesystem";
@@ -143,12 +141,31 @@ sub zfs_read
       }
     }
   close $zfs;  
+
+  my $totalsnap = 0;
+  foreach my $filesystem (keys(%zfs))
+    {
+    $totalsnap += $zfs{$filesystem}->{'usedsnap'};
+    }
+  #print format_bytes($totalsnap), " <= total snap used.\n";
+
+  my $used_snap = 
+    {
+    plugin => 'ZFS',
+    type => 'snapshot_space_used',
+    time => time,
+    interval => plugin_get_interval(),
+    host => $host,
+    values => [$totalsnap],
+    };
+  plugin_dispatch_values ($used_snap); 
   }
 
 sub read
   {
-  snapshot_read();
+  snapshot_read;
   zpool_read;
+  zfs_read;
   return 1;
   }
 
