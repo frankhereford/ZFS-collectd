@@ -54,8 +54,8 @@ sub zpool_read
 
   # Fighting with this perl "API" to do some of the more complex stuf.. 
 
-  #my $host = `hostname -f`;
-  #chomp $host;
+  my $host = `hostname -f`;
+  chomp $host;
 
   #my $data = 
     #{
@@ -78,10 +78,21 @@ sub zpool_read
     #values => [ $zpool{'free'}],
     #};
 
-  #plugin_dispatch_values ($data);
+  my $freeing = 
+    {
+    plugin => 'ZFS',
+    type => 'zpool_freeing',
+    time => time,
+    interval => plugin_get_interval(),
+    host => $host,
+    values => [ $zpool{'freeing'}],
+    };
+
+  plugin_dispatch_values ($freeing);
 
   return 1;
   }
+
 
 
 sub zfs_read
