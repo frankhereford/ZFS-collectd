@@ -156,6 +156,9 @@ sub zfs_read
   my $totalsnap = 0;
   foreach my $filesystem (keys(%zfs))
     {
+
+    # maybe work in available here into the zpool space graph for the first iteration? 
+
     my $compressratio = 
       {
       plugin => 'ZFS',
@@ -169,10 +172,30 @@ sub zfs_read
       };    
     plugin_dispatch_values ($compressratio); 
 
+    my $zfs_filesystem_space_used = 
+      {
+      plugin => 'ZFS',
+      type_instance => $filesystem,
+      type => 'zfs_filesystem_space_used',
+      time => time,
+      interval => plugin_get_interval(),
+      host => $host,
+      values => [$zfs{$filesystem}->{'usedds'}], # 'used' includes decsendents, the 'ds' means just this data set
+      };    
+    plugin_dispatch_values ($zfs_filesystem_space_used); 
 
+    my $zfs_filesystem_snap_space = 
+      {
+      plugin => 'ZFS',
+      type_instance => $filesystem,
+      type => 'zfs_filesystem_snap_space_used',
+      time => time,
+      interval => plugin_get_interval(),
+      host => $host,
+      values => [$zfs{$filesystem}->{'usedsnap'}],
+      };    
+    plugin_dispatch_values ($zfs_filesystem_snap_space); 
 
-
-    
     $totalsnap += $zfs{$filesystem}->{'usedsnap'};
     }
 
