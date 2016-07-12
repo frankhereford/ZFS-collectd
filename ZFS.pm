@@ -20,10 +20,8 @@ sub snapshot_read
   #while (<$zfs>) { $snapshot_count++; }
   #close $zfs;
 
+  # This just comes out of reddis from a daemon now. It's slow under heavy disk load.
   my $snapshot_count = $redis->get('snapshot_count');
-
-  my $host = `hostname -f`;
-  chomp $host;
 
   my $data = 
     {
@@ -42,7 +40,7 @@ sub snapshot_read
 
 sub zpool_read
   {
-  my $cmd = "zpool get -pH size,free,freeing,capacity,fragmentation";
+  my $cmd = "zpool get -pH size,allocated,free,freeing,capacity,fragmentation";
   open(my $zpool, "-|", $cmd);
   my %zpool;
   while (my $line = <$zpool>)
@@ -54,33 +52,47 @@ sub zpool_read
     }
   close $zpool;
 
-  # Fighting with this perl "API" to do some of the more complex stuf.. 
-
-  #my $data = 
+  #my $size = 
     #{
     #plugin => 'ZFS',
-    #type => 'zpool_size',
+    #type => 'zpool_space',
     #time => time,
+    #type_instance => 'Total Size',
     #interval => plugin_get_interval(),
     #host => $host,
-    #values => [$zpool{'size'}, $zpool{'free'}],
+    #values => [ $zpool{'size'}],
     #};
-  #plugin_dispatch_values ($data);
+  #plugin_dispatch_values ($size);
 
-  my $data = 
+  my $allocated = 
     {
     plugin => 'ZFS',
-    type => 'zpool_free',
+    type => 'zpool_space',
     time => time,
+    type_instance => 'Allocated Space',
+    interval => plugin_get_interval(),
+    host => $host,
+    values => [ $zpool{'allocated'}],
+    };
+  plugin_dispatch_values ($allocated);
+
+  my $free = 
+    {
+    plugin => 'ZFS',
+    type => 'zpool_space',
+    time => time,
+    type_instance => 'Free Space',
     interval => plugin_get_interval(),
     host => $host,
     values => [ $zpool{'free'}],
     };
+  plugin_dispatch_values ($free);
 
   my $freeing = 
     {
     plugin => 'ZFS',
-    type => 'zpool_freeing',
+    type => 'zpool_space',
+    type_instance => 'Space Being Freed',
     time => time,
     interval => plugin_get_interval(),
     host => $host,
@@ -91,22 +103,24 @@ sub zpool_read
   my $capacity = 
     {
     plugin => 'ZFS',
-    type => 'zpool_capacity',
+    type => 'zpool_percentage',
     time => time,
     interval => plugin_get_interval(),
     host => $host,
     values => [ $zpool{'capacity'}],
+    type_instance => '% Capacity',
     };
   plugin_dispatch_values ($capacity);
 
   my $fragmentation = 
     {
     plugin => 'ZFS',
-    type => 'zpool_fragmentation',
+    type => 'zpool_percentage',
     time => time,
     interval => plugin_get_interval(),
     host => $host,
     values => [ $zpool{'fragmentation'}],
+    type_instance => '% Fragmentation',
     };
   plugin_dispatch_values ($fragmentation);
 
@@ -134,11 +148,6 @@ sub zfs_read
     for (my $x = 1; $x < scalar(@data); $x++)
       {
       $data[$x] =~ s/[^\.\d]//g;
-      Collectd::plugin_log(Collectd::LOG_WARNING, $headers[$x] . ' ' . $data[$x]);
-      #if ($data[$x] =~ /^\d+$/)
-        #{
-        #$data[$x] = $data[$x];
-        #}
       $zfs{$data[0]}->{$headers[$x]} = $data[$x];
       }
     }
@@ -150,30 +159,28 @@ sub zfs_read
     my $compressratio = 
       {
       plugin => 'ZFS',
-      plugin_instance => $filesystem,
-      #type_instance => 'zfs_compression_ratio',
+      #plugin_instance => $filesystem, # for when you want a jillion graphs
+      type_instance => $filesystem, # for when you want a jillion lines on one graph. This could go in the flipping docs y'all.
       type => 'zfs_compression_ratio',
       time => time,
       interval => plugin_get_interval(),
       host => $host,
       values => [$zfs{$filesystem}->{'ratio'}],
       };    
-    #Collectd::plugin_log(Collectd::LOG_WARNING, Dumper $compressratio);
     plugin_dispatch_values ($compressratio); 
+
+
+
+
     
-
-
-
-
-
-
     $totalsnap += $zfs{$filesystem}->{'usedsnap'};
     }
 
   my $used_snap = 
     {
     plugin => 'ZFS',
-    type => 'snapshot_space_used',
+    type => 'zpool_space',
+    type_instance => 'Snapshot Space Used',
     time => time,
     interval => plugin_get_interval(),
     host => $host,
