@@ -67,15 +67,15 @@ sub zpool_read
     #};
   #plugin_dispatch_values ($data);
 
-  #my $data = 
-    #{
-    #plugin => 'ZFS',
-    ##type => 'zpool_free',
-    #time => time,
-    #interval => plugin_get_interval(),
-    #host => $host,
-    #values => [ $zpool{'free'}],
-    #};
+  my $data = 
+    {
+    plugin => 'ZFS',
+    type => 'zpool_free',
+    time => time,
+    interval => plugin_get_interval(),
+    host => $host,
+    values => [ $zpool{'free'}],
+    };
 
   my $freeing = 
     {
@@ -133,10 +133,12 @@ sub zfs_read
     $zfs{$data[0]} = {};
     for (my $x = 1; $x < scalar(@data); $x++)
       {
-      if ($data[$x] =~ /^\d+$/)
-        {
-        $data[$x] = $data[$x];
-        }
+      $data[$x] =~ s/[^\.\d]//g;
+      Collectd::plugin_log(Collectd::LOG_WARNING, $headers[$x] . ' ' . $data[$x]);
+      #if ($data[$x] =~ /^\d+$/)
+        #{
+        #$data[$x] = $data[$x];
+        #}
       $zfs{$data[0]}->{$headers[$x]} = $data[$x];
       }
     }
@@ -145,9 +147,28 @@ sub zfs_read
   my $totalsnap = 0;
   foreach my $filesystem (keys(%zfs))
     {
+    my $compressratio = 
+      {
+      plugin => 'ZFS',
+      plugin_instance => $filesystem,
+      #type_instance => 'zfs_compression_ratio',
+      type => 'zfs_compression_ratio',
+      time => time,
+      interval => plugin_get_interval(),
+      host => $host,
+      values => [$zfs{$filesystem}->{'ratio'}],
+      };    
+    #Collectd::plugin_log(Collectd::LOG_WARNING, Dumper $compressratio);
+    plugin_dispatch_values ($compressratio); 
+    
+
+
+
+
+
+
     $totalsnap += $zfs{$filesystem}->{'usedsnap'};
     }
-  #print format_bytes($totalsnap), " <= total snap used.\n";
 
   my $used_snap = 
     {
