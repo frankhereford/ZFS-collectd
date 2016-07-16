@@ -5,7 +5,7 @@ use Redis;
 use Data::Dumper;
 use Number::Bytes::Human;
 
-my $debug = 0;
+my $debug = 1;
 
 my $redis = Redis->new;
 

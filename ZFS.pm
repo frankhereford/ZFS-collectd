@@ -38,6 +38,67 @@ sub snapshot_read
   return 1;
   }
 
+
+sub zpool_performance
+  {
+  my $ops_read = $redis->get('twinfalls-ops-read');
+  my $ops_write = $redis->get('twinfalls-ops-write');
+  my $bw_read = $redis->get('twinfalls-bw-read');
+  my $bw_write = $redis->get('twinfalls-bw-write');
+
+  my $data = 
+    {
+    plugin => 'ZFS',
+    type => 'zfs_ops_rate',
+    type_instance => 'Pool Read Operations',
+    time => time,
+    interval => plugin_get_interval(),
+    host => $host,
+    values => [ $ops_read ],
+    };
+  plugin_dispatch_values ($data);
+
+  my $data = 
+    {
+    plugin => 'ZFS',
+    type => 'zfs_ops_rate',
+    type_instance => 'Pool Write Operations',
+    time => time,
+    interval => plugin_get_interval(),
+    host => $host,
+    values => [ $ops_write],
+    };
+  plugin_dispatch_values ($data);
+
+  my $data = 
+    {
+    plugin => 'ZFS',
+    type => 'zfs_bw_rate',
+    type_instance => 'Pool Read Bandwidth',
+    time => time,
+    interval => plugin_get_interval(),
+    host => $host,
+    values => [ $bw_read ],
+    };
+  plugin_dispatch_values ($data);
+
+  my $data = 
+    {
+    plugin => 'ZFS',
+    type => 'zfs_bw_rate',
+    type_instance => 'Pool Write Bandwidth',
+    time => time,
+    interval => plugin_get_interval(),
+    host => $host,
+    values => [ $bw_write],
+    };
+  plugin_dispatch_values ($data);
+
+  return 1;
+  }
+
+
+
 sub zpool_read
   {
   my $cmd = "zpool get -pH size,allocated,free,freeing,capacity,fragmentation";
@@ -123,6 +184,9 @@ sub zpool_read
     type_instance => '% Fragmentation',
     };
   plugin_dispatch_values ($fragmentation);
+
+
+
 
   return 1;
   }
@@ -217,6 +281,7 @@ sub read
   snapshot_read;
   zpool_read;
   zfs_read;
+  zpool_performance;
   return 1;
   }
 
