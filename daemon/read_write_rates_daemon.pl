@@ -21,6 +21,7 @@ while (my $data = <$zpool>)
   {
   #chomp $data;
   my @data = split(/\s+/, $data);
+  next if $data[0] =~ /^-+$/;
   #print Dumper \@data, "\n";
   #$redis->set('snapshot_count' => $snapshot_count);
   my $ops_read_key = $data[0] . '-' . 'ops-read';
