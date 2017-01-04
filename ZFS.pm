@@ -9,7 +9,7 @@ use Collectd qw (:all);
 
 my $redis = Redis->new;
 
-my $host = `hostname -f`;
+my $host = 'mybutterhalf';
 chomp $host;
 
 sub snapshot_read
@@ -41,10 +41,10 @@ sub snapshot_read
 
 sub zpool_performance
   {
-  my $ops_read = $redis->get('twinfalls-ops-read');
-  my $ops_write = $redis->get('twinfalls-ops-write');
-  my $bw_read = $redis->get('twinfalls-bw-read');
-  my $bw_write = $redis->get('twinfalls-bw-write');
+  my $ops_read = $redis->get('butter-ops-read');
+  my $ops_write = $redis->get('butter-ops-write');
+  my $bw_read = $redis->get('butter-bw-read');
+  my $bw_write = $redis->get('butter-bw-write');
 
   my $data = 
     {
@@ -220,7 +220,7 @@ sub zfs_read
   my $totalsnap = 0;
   foreach my $filesystem (keys(%zfs))
     {
-
+    #print $filesystem, "\n";
     # maybe work in available here into the zpool space graph for the first iteration? 
 
     my $compressratio = 
@@ -278,10 +278,10 @@ sub zfs_read
 
 sub read
   {
-  snapshot_read;
+  #snapshot_read;
+  #zpool_performance;
   zpool_read;
   zfs_read;
-  zpool_performance;
   return 1;
   }
 
