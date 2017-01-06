@@ -10,7 +10,6 @@ tie my $timer, 'Time::Stopwatch';
 
 my $debug = 0;
 my $operations_interval = 10;
-my $snap_count_interval = $operations_interval * 3; # inner loop to operations interval, so make this a multiple of the operations interval
 $| = 1;
 
 my $cmd = "sudo zpool iostat -y " . $operations_interval;
@@ -37,26 +36,10 @@ while (my $data = <$zpool>)
   print $bw_read_key, " => ", convert_human_readable_into_bytes($data[5]), "\n" if ($debug);
   print $bw_write_key, " => ", convert_human_readable_into_bytes($data[6]), "\n" if ($debug);
 
-  print "PUTVAL mybutterhalf/ZFS/zfs_ops_rate-Pool_Read_Operations interval=" . $operations_interval . " N:" . convert_human_readable_into_bytes($data[3])  . "\n";
-  print "PUTVAL mybutterhalf/ZFS/zfs_ops_rate-Pool_Write_Operations interval=" . $operations_interval . " N:" . convert_human_readable_into_bytes($data[4])  . "\n";
-  print "PUTVAL mybutterhalf/ZFS/zfs_bw_rate-Pool_Read_Bandwidth interval=" . $operations_interval . " N:" . convert_human_readable_into_bytes($data[5])  . "\n";
-  print "PUTVAL mybutterhalf/ZFS/zfs_bw_rate-Pool_Write_Bandwidth interval=" . $operations_interval . " N:" . convert_human_readable_into_bytes($data[6])  . "\n";
-
-  #$redis->set($ops_read_key => convert_human_readable_into_bytes($data[3]));
-  #$redis->set($ops_write_key => convert_human_readable_into_bytes($data[4]));
-  #$redis->set($bw_read_key => convert_human_readable_into_bytes($data[5]));
-  #$redis->set($bw_write_key => convert_human_readable_into_bytes($data[6]));
-
-  if ($timer > $snap_count_interval)
-    {
-    $timer = 0;
-    my $cmd = "sudo zfs list -t snapshot";
-    open(my $zfs , "-|", $cmd);
-    my $snapshot_count = 0;
-    while (<$zfs>) { $snapshot_count++; }
-    close $zfs;
-    print "PUTVAL mybutterhalf/ZFS/zfs_snapshots-Snapshots interval=" . $snap_count_interval . " N:" . $snapshot_count . "\n";
-    }
+  print "PUTVAL jupiter/ZFS/zfs_ops_rate-" . $data[0] . "_Pool_Read_Operations interval=" . $operations_interval . " N:" . convert_human_readable_into_bytes($data[3])  . "\n";
+  print "PUTVAL jupiter/ZFS/zfs_ops_rate-" . $data[0] . "_Pool_Write_Operations interval=" . $operations_interval . " N:" . convert_human_readable_into_bytes($data[4])  . "\n";
+  print "PUTVAL jupiter/ZFS/zfs_bw_rate-" . $data[0] . "_Pool_Read_Bandwidth interval=" . $operations_interval . " N:" . convert_human_readable_into_bytes($data[5])  . "\n";
+  print "PUTVAL jupiter/ZFS/zfs_bw_rate-" . $data[0] . "_Pool_Write_Bandwidth interval=" . $operations_interval . " N:" . convert_human_readable_into_bytes($data[6])  . "\n";
   }
 close $zpool;
 

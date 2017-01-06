@@ -9,7 +9,7 @@ use Collectd qw (:all);
 
 my $redis = Redis->new;
 
-my $host = 'mybutterhalf';
+my $host = 'jupiter';
 chomp $host;
 
 sub snapshot_read
