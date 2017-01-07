@@ -9,7 +9,7 @@ use Time::Stopwatch;
 tie my $timer, 'Time::Stopwatch';
 
 my $debug = 0;
-my $snap_count_interval = 300;
+my $snap_count_interval = 60;
 $| = 1;
 
 while (1)
